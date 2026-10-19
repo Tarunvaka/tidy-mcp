@@ -70,13 +70,13 @@ def plan(
     console.print(_table(result))
     console.print(
         f"\nPlan [bold]{result.id}[/bold]: {len(result.moves)} changes. "
-        f"Apply with [bold]tidy apply {result.id}[/bold]"
+        f"Apply with [bold]tidy apply {result.id}[/bold] (or [bold]tidy apply last[/bold])"
     )
 
 
 @app.command()
 def apply(
-    plan_id: str,
+    plan_id: Annotated[str, typer.Argument(help='Plan ID, or "last"')],
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip the confirmation")] = False,
 ) -> None:
     """Apply a plan by its ID."""
@@ -88,12 +88,12 @@ def apply(
     console.print(_table(result))
     if not yes and not typer.confirm(f"Apply {len(result.moves)} changes?"):
         raise typer.Exit()
-    done = service.apply(plan_id)
-    console.print(f"[green]Done. {len(done)} files tidied.[/green] Undo with tidy undo {plan_id}")
+    done = service.apply(result.id)
+    console.print(f"[green]Done. {len(done)} files tidied.[/green] Undo with tidy undo {result.id}")
 
 
 @app.command()
-def undo(plan_id: str) -> None:
+def undo(plan_id: Annotated[str, typer.Argument(help='Plan ID, or "last"')]) -> None:
     """Put every file from an applied plan back where it was."""
     try:
         restored = service.undo(plan_id)

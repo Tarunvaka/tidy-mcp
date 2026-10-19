@@ -1,0 +1,24 @@
+name: Bug report
+description: Something tidy did wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you ran, what you expected and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: plan
+    attributes:
+      label: Plan output
+      description: Paste the `tidy plan` table if relevant. Remove anything private.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `tidy version`, your OS, and `ollama --version`
+    validations:
+      required: true

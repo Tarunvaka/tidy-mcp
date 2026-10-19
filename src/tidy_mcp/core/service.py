@@ -58,7 +58,7 @@ def apply(plan_id: str) -> list[Move]:
 
 
 def undo(plan_id: str) -> list[Move]:
-    return undo_log(plan_id)
+    return undo_log(store.resolve(plan_id))
 
 
 def duplicates(path: Path, limit: int = 500) -> list[list[FileInfo]]:

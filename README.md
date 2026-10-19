@@ -6,6 +6,8 @@ Point tidy at a messy folder. A local model looks at every file, gives it a real
 
 > 🚧 Early release. Feedback welcome.
 
+![tidy planning, applying and undoing a messy Downloads folder](docs/demo.gif)
+
 ```
 IMG_2931.png            →  Receipts/2026-06-12_Amazon_receipt.png
 Screenshot 11.04.12.png →  Screenshots/Code/python_KeyError_traceback.png
@@ -45,8 +47,8 @@ scan → plan (dry run) → preview → apply → undo
 
 ```bash
 tidy plan ~/Downloads      # dry run: shows every change, moves nothing
-tidy apply <plan-id>       # asks before moving
-tidy undo <plan-id>        # puts everything back
+tidy apply last           # asks before moving (or pass a plan ID)
+tidy undo last            # puts everything back
 tidy dupes ~/Downloads     # list duplicate files
 ```
 
@@ -113,6 +115,10 @@ uv run python scripts/eval_quality.py    # scores naming on 30 varied files (nee
 ```
 
 Current score with `qwen2.5:7b` + `qwen2.5vl:7b`: 29/30 folders correct, 30/30 names contain the key words.
+
+## Contributing
+
+Issues labeled [good first issue](https://github.com/Tarunvaka/tidy-mcp/labels/good%20first%20issue) are a good place to start. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Releasing
 

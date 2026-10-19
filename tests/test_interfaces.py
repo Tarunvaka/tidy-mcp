@@ -34,7 +34,7 @@ def snapshot(root):
 
 
 def plan_id_from(output: str) -> str:
-    return output.split("tidy apply ")[-1].split()[0]
+    return output.split("Plan ")[-1].split(":")[0]
 
 
 def test_cli_plan_apply_undo(messy):
@@ -123,3 +123,12 @@ def test_mcp_read_only_tools(messy):
 def test_mcp_errors_are_readable(messy):
     with pytest.raises(Exception, match="No plan"):
         call("apply_plan", plan_id="nope")
+
+
+def test_cli_last_shortcut(messy):
+    before = snapshot(messy)
+    runner.invoke(app, ["plan", str(messy)])
+    assert runner.invoke(app, ["apply", "last", "-y"]).exit_code == 0
+    assert snapshot(messy) != before
+    assert runner.invoke(app, ["undo", "last"]).exit_code == 0
+    assert snapshot(messy) == before

@@ -29,8 +29,20 @@ def save_plan(plan: Plan) -> Path:
     return path
 
 
+def latest_plan_id() -> str:
+    plans = sorted((home() / "plans").glob("*.json"), key=lambda p: p.stat().st_mtime)
+    if not plans:
+        raise FileNotFoundError("No plans yet. Run tidy plan <folder> first")
+    return plans[-1].stem
+
+
+def resolve(plan_id: str) -> str:
+    """Accept "last" as shorthand for the most recent plan."""
+    return latest_plan_id() if plan_id == "last" else plan_id
+
+
 def load_plan(plan_id: str) -> Plan:
-    path = _plan_path(plan_id)
+    path = _plan_path(resolve(plan_id))
     if not path.exists():
         raise FileNotFoundError(f"No plan with id {plan_id}")
     return Plan.model_validate_json(path.read_text())

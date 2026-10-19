@@ -1,0 +1,27 @@
+name: Bad name or folder
+description: tidy picked a poor name or folder for a file
+labels: [naming]
+body:
+  - type: input
+    id: file
+    attributes:
+      label: Original file name
+    validations:
+      required: true
+  - type: input
+    id: got
+    attributes:
+      label: What tidy suggested
+    validations:
+      required: true
+  - type: input
+    id: want
+    attributes:
+      label: What you'd expect
+    validations:
+      required: true
+  - type: textarea
+    id: kind
+    attributes:
+      label: What kind of file is it?
+      description: Describe the content. Don't attach private files.
