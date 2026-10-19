@@ -4,7 +4,7 @@
 
 Point tidy at a messy folder. A local model looks at every file, gives it a real name and sorts it into folders. Nothing leaves your machine, and every run can be undone.
 
-> 🚧 Work in progress. Not on PyPI yet.
+> 🚧 Early release. Feedback welcome.
 
 ```
 IMG_2931.png            →  Receipts/2026-06-12_Amazon_receipt.png
@@ -35,11 +35,10 @@ scan → plan (dry run) → preview → apply → undo
    ollama pull qwen2.5vl:7b
    ```
 
-2. Install tidy from source:
+2. Install tidy:
 
    ```bash
-   git clone https://github.com/Tarunvaka/tidy-mcp && cd tidy-mcp
-   uv tool install .
+   uv tool install tidy-mcp      # or: pipx install tidy-mcp
    ```
 
 ## CLI
@@ -59,8 +58,8 @@ Add tidy to your MCP client. For Claude Desktop, edit `claude_desktop_config.jso
 {
   "mcpServers": {
     "tidy": {
-      "command": "uv",
-      "args": ["--directory", "/path/to/tidy-mcp", "run", "tidy-mcp"]
+      "command": "uvx",
+      "args": ["tidy-mcp"]
     }
   }
 }
@@ -69,7 +68,7 @@ Add tidy to your MCP client. For Claude Desktop, edit `claude_desktop_config.jso
 For Claude Code:
 
 ```bash
-claude mcp add tidy -- uv --directory /path/to/tidy-mcp run tidy-mcp
+claude mcp add tidy -- uvx tidy-mcp
 ```
 
 For Cursor, add the same `command` and `args` under `mcpServers` in `~/.cursor/mcp.json`.
@@ -114,6 +113,14 @@ uv run python scripts/eval_quality.py    # scores naming on 30 varied files (nee
 ```
 
 Current score with `qwen2.5:7b` + `qwen2.5vl:7b`: 29/30 folders correct, 30/30 names contain the key words.
+
+## Releasing
+
+1. Move the `Unreleased` notes in `CHANGELOG.md` under a new version heading.
+2. `uv version --bump minor` (or `patch` / `major`) and commit.
+3. `git tag v$(uv version --short) && git push --tags`
+
+The Release workflow tests, builds, publishes to PyPI and creates the GitHub release.
 
 ## License
 
