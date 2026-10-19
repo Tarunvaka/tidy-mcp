@@ -1,0 +1,49 @@
+[project]
+name = "tidy-mcp"
+version = "0.1.0"
+description = "Clean up messy folders with a local AI. Private, undoable. CLI + MCP server."
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Tarunvaka", email = "tarunvaka2003@gmail.com" }
+]
+requires-python = ">=3.12"
+keywords = ["mcp", "ollama", "local-llm", "file-organizer", "cli"]
+dependencies = [
+    "exifread>=3.0",
+    "mcp>=2.0",
+    "ollama>=0.4",
+    "pillow>=10.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "pypdf>=4.0",
+    "python-docx>=1.1",
+    "rich>=13.7",
+    "typer>=0.12",
+    "xxhash>=3.4",
+]
+
+[project.scripts]
+tidy = "tidy_mcp.cli:app"
+tidy-mcp = "tidy_mcp.mcp_server:main"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.100",
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
