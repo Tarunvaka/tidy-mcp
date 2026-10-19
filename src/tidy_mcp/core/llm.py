@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 import ollama
 
+from tidy_mcp.core.cache import DescriptionCache
 from tidy_mcp.core.extract import extract_text, photo_date
 from tidy_mcp.core.models import Description, FileInfo, FileKind
 
@@ -13,6 +14,7 @@ logging.getLogger("exifread").setLevel(logging.ERROR)
 
 DEFAULT_TEXT_MODEL = "qwen2.5:7b"
 DEFAULT_VISION_MODEL = "qwen2.5vl:7b"
+PROMPT_VERSION = 4  # bump when the prompt or cleanup changes, so cached answers are redone
 
 _DEFAULT_CATEGORY = {
     FileKind.DOCUMENT: "Documents",
@@ -28,17 +30,33 @@ _DEFAULT_CATEGORY = {
 _PROMPT = """You organize a messy Downloads folder.
 Give this file a clear new name and a folder.
 
-Rules:
-- name: short, descriptive, words joined by underscores, no extension.
-  Start with a date (YYYY-MM-DD) only if the content shows one.
-  Examples: 2026-06-12_Amazon_receipt, Lease_Agreement_Bangalore_2025, python_KeyError_traceback
-- category: one folder, or two levels joined by "/".
-  Prefer: Receipts, Invoices, Documents, Documents/Housing, Travel, Screenshots,
-  Screenshots/Code, Photos, Notes, Code, Archives, Installers, Audio, Videos.
-- summary: one short sentence.
+name: short, specific, words joined by underscores, no extension.
+  Say what is inside, not just the document type: what the code does, which test a report
+  covers, who sent an invoice. Start with a date (YYYY-MM-DD) only if the content shows one.
+  Good: Uber_ride_receipt, Blood_test_report_Apollo, SQL_user_order_counts,
+  Lease_Agreement_Bangalore_2025, python_KeyError_traceback
+
+category: pick from this list. Add one sub-folder with "/" only when it clearly helps.
+  Receipts      - proof of payment: shop, food, ride, app store receipts
+  Invoices      - bills asking for payment
+  Finance       - bank statements, tax forms, salary slips, expense data
+  Work          - resumes, offer letters, meeting notes, pitch decks, work documents
+  Travel        - tickets, boarding passes, hotel and travel bookings
+  Health        - medical reports, prescriptions
+  Documents     - contracts, agreements, warranties, IDs and other official papers
+  Papers        - research papers and academic articles
+  Notes         - personal notes, to-do lists, shopping lists, recipes, lyrics, study notes
+  Screenshots   - every screenshot; use Screenshots/Code for screenshots of code or errors
+  Code          - source code, scripts and config files only
+  Photos        - camera photos of people, places and things
+  Images        - other pictures and graphics
+  Data          - spreadsheets and data files
+  Archives, Installers, Audio, Videos, Other
+
+summary: one short sentence.
 
 Current name: {filename}
-Type: {kind}
+Type: {kind}{screenshot}
 {details}"""
 
 
@@ -51,6 +69,7 @@ class Describer:
     text_model: str = DEFAULT_TEXT_MODEL
     vision_model: str = DEFAULT_VISION_MODEL
     host: str | None = None
+    cache: DescriptionCache | None = None
     client: ollama.Client = field(init=False)
 
     def __post_init__(self) -> None:
@@ -70,11 +89,17 @@ class Describer:
 
     def describe(self, info: FileInfo) -> Description:
         """Describe one file. Falls back to a safe default if the model fails."""
+        key = f"{info.hash}|{info.path.name}|{self.text_model}|{self.vision_model}|{PROMPT_VERSION}"
+        if self.cache and (hit := self.cache.get(key)):
+            return hit
         try:
             desc, evidence = self._ask(info)
-            return _clean(desc, info, evidence)
+            result = _clean(desc, info, evidence)
         except Exception:
             return fallback(info)
+        if self.cache:
+            self.cache.put(key, result)
+        return result
 
     def _ask(self, info: FileInfo) -> tuple[Description, str]:
         """The model's answer plus the text it was shown, used to check its dates."""
@@ -92,8 +117,16 @@ class Describer:
         else:
             details.append("No readable content. Name it from the file name and type.")
 
+        screenshot = (
+            " (a screenshot)"
+            if info.path.name.lower().startswith(("screenshot", "screen shot"))
+            else ""
+        )
         prompt = _PROMPT.format(
-            filename=info.path.name, kind=info.kind.value, details="\n".join(details)
+            filename=info.path.name,
+            kind=info.kind.value,
+            screenshot=screenshot,
+            details="\n".join(details),
         )
         message: dict = {"role": "user", "content": prompt}
         if images:
@@ -129,7 +162,27 @@ def _clean(desc: Description, info: FileInfo, evidence: str = "") -> Description
     name = safe_name(_drop_invented_dates(desc.name, evidence)) or info.path.stem
     parts = [safe_name(p) for p in desc.category.replace("\\", "/").split("/")]
     category = "/".join(p for p in parts[:2] if p) or _DEFAULT_CATEGORY[info.kind]
-    return Description(name=name, category=category, summary=desc.summary.strip())
+    return Description(
+        name=name, category=_fix_category(category, info), summary=desc.summary.strip()
+    )
+
+
+def is_screenshot(info: FileInfo) -> bool:
+    return info.kind == FileKind.IMAGE and info.path.name.lower().startswith(
+        ("screenshot", "screen shot", "cleanshot")
+    )
+
+
+def _fix_category(category: str, info: FileInfo) -> str:
+    """Rules the model sometimes breaks: screenshots stay together, Code is for code files."""
+    top = category.split("/")[0].lower()
+    if is_screenshot(info):
+        if top == "screenshots":
+            return category
+        return "Screenshots/Code" if top == "code" else "Screenshots"
+    if top == "code" and info.kind != FileKind.CODE:
+        return _DEFAULT_CATEGORY[info.kind]
+    return category
 
 
 def safe_name(text: str, max_len: int = 80) -> str:

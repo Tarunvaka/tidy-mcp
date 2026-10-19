@@ -19,6 +19,7 @@ def apply_plan(plan: Plan) -> list[Move]:
     """
     root = plan.root.resolve()
     done: list[Move] = []
+    store.write_log(plan.id, done)
     for move in plan.moves:
         if not move.source.is_file() or move.source.is_symlink():
             continue
@@ -27,7 +28,10 @@ def apply_plan(plan: Plan) -> list[Move]:
             raise UnsafeMove(f"{move.source} is outside {root}")
         if not plan.allows(dest):
             raise UnsafeMove(f"{dest} is outside the folders this plan may use")
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+        except (FileExistsError, NotADirectoryError):
+            continue  # a file now sits where the folder should go; leave this one alone
         move_file(move.source, dest)
         done.append(move.model_copy(update={"destination": dest}))
         store.write_log(plan.id, done)

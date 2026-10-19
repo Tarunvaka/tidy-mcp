@@ -44,6 +44,7 @@ class Config(BaseSettings):
     vision_model: str = DEFAULT_VISION_MODEL
     ollama_host: str | None = None
     limit: int = 500
+    workers: int = 4  # files described at once; Ollama queues anything beyond its own limit
     ignore: list[str] = []
     rules: list[Rule] = []
 

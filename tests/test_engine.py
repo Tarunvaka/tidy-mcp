@@ -110,3 +110,44 @@ def test_invented_dates_are_dropped():
         == "2026-10-02_KeyError"
     )
     assert _drop_invented_dates("Invoice_2025-01-31", "Due 2025.01.31") == "Invoice_2025-01-31"
+
+
+def test_file_named_like_a_folder_does_not_block_it(messy):
+    (messy / "OTHER").write_bytes(b"x")
+    plan = build_plan(
+        messy, scan(messy), lambda f: Description(name="n", category="Other", summary="")
+    )
+    store.save_plan(plan)
+    apply_plan(plan)
+    undo(plan.id)
+    assert (messy / "OTHER").read_bytes() == b"x"
+
+
+def test_empty_plan_can_be_undone(tmp_path, monkeypatch):
+    monkeypatch.setenv("TIDY_HOME", str(tmp_path / "home"))
+    (tmp_path / "empty").mkdir()
+    plan = build_plan(tmp_path / "empty", [], fake_describe)
+    store.save_plan(plan)
+    apply_plan(plan)
+    assert undo(plan.id) == []
+
+
+def test_category_rules(tmp_path):
+    from datetime import datetime
+
+    from tidy_mcp.core.llm import _clean
+
+    def info(name, kind):
+        return FileInfo(path=tmp_path / name, kind=kind, size=1, modified=datetime.now(), hash="h")
+
+    shot = info("Screenshot 2026-10-11 at 09.12.44.png", FileKind.IMAGE)
+    assert _clean(Description(name="e", category="Code", summary=""), shot).category == (
+        "Screenshots/Code"
+    )
+    assert _clean(Description(name="e", category="Work", summary=""), shot).category == (
+        "Screenshots"
+    )
+    photo = info("image (7).png", FileKind.IMAGE)
+    assert _clean(Description(name="w", category="Code", summary=""), photo).category == "Images"
+    code = info("a.py", FileKind.CODE)
+    assert _clean(Description(name="a", category="Code", summary=""), code).category == "Code"

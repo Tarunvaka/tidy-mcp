@@ -3,6 +3,7 @@
 import uuid
 from collections import defaultdict
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -30,6 +31,7 @@ def build_plan(
     describe: Callable[[FileInfo], Description],
     now: datetime | None = None,
     rule_folder: Callable[[Description], Path | None] | None = None,
+    workers: int = 1,
 ) -> Plan:
     root = root.expanduser().resolve()
     now = now or datetime.now()
@@ -39,9 +41,18 @@ def build_plan(
 
     duplicates = {f.path: group[0].path.name for group in find_duplicates(files) for f in group[1:]}
 
+    def stale_installer(f: FileInfo) -> bool:
+        return f.kind == FileKind.INSTALLER and now - f.modified > timedelta(
+            days=STALE_INSTALLER_DAYS
+        )
+
+    to_describe = [f for f in files if f.path not in duplicates and not stale_installer(f)]
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        descriptions = dict(zip(map(id, to_describe), pool.map(describe, to_describe), strict=True))
+
     for f in files:
         if f.path in duplicates:
-            dest = _free(root / TRASH_DIR / f.path.name, taken)
+            dest = _free(_usable_folder(root, TRASH_DIR) / f.path.name, taken)
             moves.append(
                 Move(
                     source=f.path,
@@ -52,8 +63,8 @@ def build_plan(
             )
             continue
 
-        if f.kind == FileKind.INSTALLER and now - f.modified > timedelta(days=STALE_INSTALLER_DAYS):
-            dest = _free(root / TRASH_DIR / f.path.name, taken)
+        if stale_installer(f):
+            dest = _free(_usable_folder(root, TRASH_DIR) / f.path.name, taken)
             moves.append(
                 Move(
                     source=f.path,
@@ -64,13 +75,14 @@ def build_plan(
             )
             continue
 
-        desc = describe(f)
+        desc = descriptions[id(f)]
         folder = rule_folder(desc) if rule_folder else None
         if folder is not None:
             extra_roots.add(folder.resolve())
             target = folder.resolve() / f"{desc.name}{f.path.suffix.lower()}"
         else:
-            target = root / desc.category / f"{desc.name}{f.path.suffix.lower()}"
+            folder = _usable_folder(root, desc.category)
+            target = folder / f"{desc.name}{f.path.suffix.lower()}"
             if not _inside(target, root):
                 continue
         if target == f.path:
@@ -87,6 +99,21 @@ def build_plan(
         moves=moves,
         extra_roots=sorted(extra_roots),
     )
+
+
+def _usable_folder(root: Path, category: str) -> Path:
+    """root/category, renaming any level that a file already occupies (Other -> Other-2).
+
+    Checked on disk, so it also catches case-insensitive clashes like a file named OTHER.
+    """
+    folder = root
+    for part in Path(category).parts:
+        candidate, n = folder / part, 1
+        while candidate.exists() and not candidate.is_dir():
+            n += 1
+            candidate = folder / f"{part}-{n}"
+        folder = candidate
+    return folder
 
 
 def _inside(path: Path, root: Path) -> bool:
