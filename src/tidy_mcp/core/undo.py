@@ -14,7 +14,7 @@ def undo(plan_id: str) -> list[Move]:
     Folders tidy created are removed once they are empty.
     """
     plan = store.load_plan(plan_id)
-    root = plan.root.resolve()
+    roots = [r.resolve() for r in [plan.root, *plan.extra_roots]]
     restored: list[Move] = []
     for move in reversed(store.read_log(plan_id)):
         if not move.destination.is_file() or move.source.exists():
@@ -22,13 +22,14 @@ def undo(plan_id: str) -> list[Move]:
         move.source.parent.mkdir(parents=True, exist_ok=True)
         move_file(move.destination, move.source)
         restored.append(move)
-        _remove_empty_parents(move.destination.parent, root)
+        _remove_empty_parents(move.destination.parent, roots)
     store.write_log(plan_id, [])
     return restored
 
 
-def _remove_empty_parents(folder: Path, root: Path) -> None:
-    while folder.resolve() != root and folder.resolve().is_relative_to(root):
+def _remove_empty_parents(folder: Path, roots: list[Path]) -> None:
+    """Remove empty folders up to, but never including, the nearest root."""
+    while any(folder.resolve().is_relative_to(r) and folder.resolve() != r for r in roots):
         try:
             folder.rmdir()
         except OSError:

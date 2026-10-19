@@ -13,12 +13,14 @@ STALE_INSTALLER_DAYS = 30
 
 
 def find_duplicates(files: list[FileInfo]) -> list[list[FileInfo]]:
-    """Groups of identical files, newest first in each group."""
+    """Groups of identical files. The first in each group is the original (oldest) and is kept."""
     groups: dict[str, list[FileInfo]] = defaultdict(list)
     for f in files:
         groups[f.hash].append(f)
     return [
-        sorted(g, key=lambda f: f.modified, reverse=True) for g in groups.values() if len(g) > 1
+        sorted(g, key=lambda f: (f.modified, len(f.path.name)))
+        for g in groups.values()
+        if len(g) > 1
     ]
 
 
@@ -27,11 +29,13 @@ def build_plan(
     files: list[FileInfo],
     describe: Callable[[FileInfo], Description],
     now: datetime | None = None,
+    rule_folder: Callable[[Description], Path | None] | None = None,
 ) -> Plan:
     root = root.expanduser().resolve()
     now = now or datetime.now()
     taken: set[Path] = set()
     moves: list[Move] = []
+    extra_roots: set[Path] = set()
 
     duplicates = {f.path: group[0].path.name for group in find_duplicates(files) for f in group[1:]}
 
@@ -61,9 +65,14 @@ def build_plan(
             continue
 
         desc = describe(f)
-        target = root / desc.category / f"{desc.name}{f.path.suffix.lower()}"
-        if not _inside(target, root):
-            continue
+        folder = rule_folder(desc) if rule_folder else None
+        if folder is not None:
+            extra_roots.add(folder.resolve())
+            target = folder.resolve() / f"{desc.name}{f.path.suffix.lower()}"
+        else:
+            target = root / desc.category / f"{desc.name}{f.path.suffix.lower()}"
+            if not _inside(target, root):
+                continue
         if target == f.path:
             taken.add(f.path)
             continue
@@ -71,7 +80,13 @@ def build_plan(
         action = MoveAction.RENAME if dest.parent == f.path.parent else MoveAction.MOVE
         moves.append(Move(source=f.path, destination=dest, action=action, reason=desc.summary))
 
-    return Plan(id=uuid.uuid4().hex[:8], root=root, created=now, moves=moves)
+    return Plan(
+        id=uuid.uuid4().hex[:8],
+        root=root,
+        created=now,
+        moves=moves,
+        extra_roots=sorted(extra_roots),
+    )
 
 
 def _inside(path: Path, root: Path) -> bool:

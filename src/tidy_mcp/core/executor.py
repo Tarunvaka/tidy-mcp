@@ -23,9 +23,10 @@ def apply_plan(plan: Plan) -> list[Move]:
         if not move.source.is_file() or move.source.is_symlink():
             continue
         dest = _unused(move.destination)
-        for p in (move.source, dest):
-            if not p.resolve().is_relative_to(root):
-                raise UnsafeMove(f"{p} is outside {root}")
+        if not move.source.resolve().is_relative_to(root):
+            raise UnsafeMove(f"{move.source} is outside {root}")
+        if not plan.allows(dest):
+            raise UnsafeMove(f"{dest} is outside the folders this plan may use")
         dest.parent.mkdir(parents=True, exist_ok=True)
         move_file(move.source, dest)
         done.append(move.model_copy(update={"destination": dest}))

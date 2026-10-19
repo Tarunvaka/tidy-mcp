@@ -58,3 +58,11 @@ class Plan(BaseModel):
     root: Path
     created: datetime
     moves: list[Move] = Field(default_factory=list)
+    extra_roots: list[Path] = Field(
+        default_factory=list,
+        description="Folders outside root that config rules may move files into",
+    )
+
+    def allows(self, path: Path) -> bool:
+        resolved = path.resolve()
+        return any(resolved.is_relative_to(r.resolve()) for r in [self.root, *self.extra_roots])
