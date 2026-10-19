@@ -1,5 +1,6 @@
 """Ask a local Ollama model to name and categorize a file."""
 
+import logging
 import re
 from dataclasses import dataclass, field
 
@@ -7,6 +8,8 @@ import ollama
 
 from tidy_mcp.core.extract import extract_text, photo_date
 from tidy_mcp.core.models import Description, FileInfo, FileKind
+
+logging.getLogger("exifread").setLevel(logging.ERROR)
 
 DEFAULT_TEXT_MODEL = "qwen2.5:7b"
 DEFAULT_VISION_MODEL = "qwen2.5vl:7b"
@@ -68,11 +71,13 @@ class Describer:
     def describe(self, info: FileInfo) -> Description:
         """Describe one file. Falls back to a safe default if the model fails."""
         try:
-            return _clean(self._ask(info), info)
+            desc, evidence = self._ask(info)
+            return _clean(desc, info, evidence)
         except Exception:
             return fallback(info)
 
-    def _ask(self, info: FileInfo) -> Description:
+    def _ask(self, info: FileInfo) -> tuple[Description, str]:
+        """The model's answer plus the text it was shown, used to check its dates."""
         details: list[str] = []
         images: list[str] | None = None
         model = self.text_model
@@ -85,7 +90,7 @@ class Describer:
         elif text := extract_text(info):
             details.append(f"Content:\n{text}")
         else:
-            details.append(f"No readable content. Modified {info.modified:%Y-%m-%d}.")
+            details.append("No readable content. Name it from the file name and type.")
 
         prompt = _PROMPT.format(
             filename=info.path.name, kind=info.kind.value, details="\n".join(details)
@@ -99,15 +104,29 @@ class Describer:
             format=Description.model_json_schema(),
             options={"temperature": 0},
         )
-        return Description.model_validate_json(response.message.content)
+        evidence = info.path.name + "\n" + "\n".join(details)
+        return Description.model_validate_json(response.message.content), evidence
 
 
 def fallback(info: FileInfo) -> Description:
     return Description(name=info.path.stem, category=_DEFAULT_CATEGORY[info.kind], summary="")
 
 
-def _clean(desc: Description, info: FileInfo) -> Description:
-    name = safe_name(desc.name) or info.path.stem
+_DATE = re.compile(r"(\d{4})[-_.](\d{2})[-_.](\d{2})")
+
+
+def _drop_invented_dates(name: str, evidence: str) -> str:
+    """Remove dates the model made up. A date stays only if the file itself shows it."""
+    seen = {m.groups() for m in _DATE.finditer(evidence)}
+
+    def keep(m: re.Match) -> str:
+        return m.group(0) if m.groups() in seen else ""
+
+    return re.sub(r"_{2,}", "_", _DATE.sub(keep, name)).strip("_-. ")
+
+
+def _clean(desc: Description, info: FileInfo, evidence: str = "") -> Description:
+    name = safe_name(_drop_invented_dates(desc.name, evidence)) or info.path.stem
     parts = [safe_name(p) for p in desc.category.replace("\\", "/").split("/")]
     category = "/".join(p for p in parts[:2] if p) or _DEFAULT_CATEGORY[info.kind]
     return Description(name=name, category=category, summary=desc.summary.strip())

@@ -97,3 +97,16 @@ def test_describer_falls_back_when_ollama_is_down(messy):
 def test_safe_name():
     assert safe_name("2026/06 Amazon: receipt?") == "202606_Amazon_receipt"
     assert safe_name("../..") == ""
+
+
+def test_invented_dates_are_dropped():
+    from tidy_mcp.core.llm import _drop_invented_dates
+
+    assert (
+        _drop_invented_dates("2023-10-05_Meeting_notes", "notes.txt\nship tidy") == "Meeting_notes"
+    )
+    assert (
+        _drop_invented_dates("2026-10-02_KeyError", "Screenshot 2026-10-02 at 11.04.12.png")
+        == "2026-10-02_KeyError"
+    )
+    assert _drop_invented_dates("Invoice_2025-01-31", "Due 2025.01.31") == "Invoice_2025-01-31"
