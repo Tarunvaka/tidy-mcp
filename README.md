@@ -37,7 +37,7 @@ scan → plan (dry run) → preview → apply → undo
    ollama pull qwen2.5vl:7b
    ```
 
-2. Install tidy:
+2. Install tidy (needs Python 3.12+):
 
    ```bash
    uv tool install tidy-mcp      # or: pipx install tidy-mcp
@@ -47,8 +47,8 @@ scan → plan (dry run) → preview → apply → undo
 
 ```bash
 tidy plan ~/Downloads      # dry run: shows every change, moves nothing
-tidy apply last           # asks before moving (or pass a plan ID)
-tidy undo last            # puts everything back
+tidy apply last            # asks before moving (or pass a plan ID)
+tidy undo last             # puts everything back
 tidy dupes ~/Downloads     # list duplicate files
 ```
 
