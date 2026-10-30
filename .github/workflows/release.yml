@@ -1,6 +1,8 @@
 name: Release
 
-# Push a tag like v0.1.0 to publish that version to PyPI and create a GitHub release.
+# Push a tag like v0.1.0 to create a GitHub release.
+# PyPI publishing runs only when the repository variable PYPI_PUBLISH is "true"
+# (set it after adding this workflow as a trusted publisher on pypi.org).
 on:
   push:
     tags: ["v*"]
@@ -29,6 +31,7 @@ jobs:
 
   publish:
     needs: build
+    if: vars.PYPI_PUBLISH == 'true'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -41,7 +44,8 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    needs: publish
+    needs: [build, publish]
+    if: always() && needs.build.result == 'success' && needs.publish.result != 'failure'
     runs-on: ubuntu-latest
     permissions:
       contents: write

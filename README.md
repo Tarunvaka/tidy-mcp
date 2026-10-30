@@ -40,7 +40,7 @@ scan → plan (dry run) → preview → apply → undo
 2. Install tidy (needs Python 3.12+):
 
    ```bash
-   uv tool install tidy-mcp      # or: pipx install tidy-mcp
+   uv tool install git+https://github.com/Tarunvaka/tidy-mcp
    ```
 
 ## CLI
@@ -61,7 +61,7 @@ Add tidy to your MCP client. For Claude Desktop, edit `claude_desktop_config.jso
   "mcpServers": {
     "tidy": {
       "command": "uvx",
-      "args": ["tidy-mcp"]
+      "args": ["--from", "git+https://github.com/Tarunvaka/tidy-mcp", "tidy-mcp"]
     }
   }
 }
@@ -70,7 +70,7 @@ Add tidy to your MCP client. For Claude Desktop, edit `claude_desktop_config.jso
 For Claude Code:
 
 ```bash
-claude mcp add tidy -- uvx tidy-mcp
+claude mcp add tidy -- uvx --from git+https://github.com/Tarunvaka/tidy-mcp tidy-mcp
 ```
 
 For Cursor, add the same `command` and `args` under `mcpServers` in `~/.cursor/mcp.json`.

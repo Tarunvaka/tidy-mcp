@@ -7,7 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [0.1.0] - 2026-10-19
 
-First release.
+First release. Install from GitHub with `uv tool install git+https://github.com/Tarunvaka/tidy-mcp`.
 
 ### Added
 
