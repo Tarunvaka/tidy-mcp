@@ -94,7 +94,7 @@ def scan(root: Path, limit: int = 500) -> list[FileInfo]:
                 path=path,
                 kind=kind_of(path),
                 size=stat.st_size,
-                modified=datetime.fromtimestamp(stat.st_mtime),
+                modified=datetime.fromtimestamp(stat.st_mtime).astimezone(),
                 hash=file_hash(path),
             )
         )

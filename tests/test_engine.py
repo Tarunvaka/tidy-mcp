@@ -138,7 +138,9 @@ def test_category_rules(tmp_path):
     from tidy_mcp.core.llm import _clean
 
     def info(name, kind):
-        return FileInfo(path=tmp_path / name, kind=kind, size=1, modified=datetime.now(), hash="h")
+        return FileInfo(
+            path=tmp_path / name, kind=kind, size=1, modified=datetime.now().astimezone(), hash="h"
+        )
 
     shot = info("Screenshot 2026-10-11 at 09.12.44.png", FileKind.IMAGE)
     assert _clean(Description(name="e", category="Code", summary=""), shot).category == (

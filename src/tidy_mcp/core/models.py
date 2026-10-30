@@ -1,10 +1,9 @@
 """Data contracts shared by every part of tidy. Build everything against these."""
 
-from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 
 
 class FileKind(StrEnum):
@@ -24,7 +23,7 @@ class FileInfo(BaseModel):
     path: Path
     kind: FileKind
     size: int
-    modified: datetime
+    modified: AwareDatetime
     hash: str = Field(description="xxhash of the file contents; shared by dedupe and cache")
 
 
@@ -56,7 +55,7 @@ class Plan(BaseModel):
 
     id: str
     root: Path
-    created: datetime
+    created: AwareDatetime
     moves: list[Move] = Field(default_factory=list)
     extra_roots: list[Path] = Field(
         default_factory=list,

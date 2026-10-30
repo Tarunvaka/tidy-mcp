@@ -8,7 +8,7 @@ def test_plan_round_trips_through_json():
     plan = Plan(
         id="abc123",
         root=Path("/tmp/downloads"),
-        created=datetime(2026, 10, 19),
+        created=datetime(2026, 10, 19).astimezone(),
         moves=[
             Move(
                 source=Path("/tmp/downloads/IMG_1.png"),
@@ -23,3 +23,11 @@ def test_plan_round_trips_through_json():
 def test_description_schema_has_required_fields():
     schema = Description.model_json_schema()
     assert set(schema["required"]) == {"name", "category", "summary"}
+
+
+def test_timestamps_must_have_a_timezone():
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Plan(id="x", root=Path("/tmp"), created=datetime(2026, 10, 19))

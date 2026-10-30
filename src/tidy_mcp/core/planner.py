@@ -34,7 +34,7 @@ def build_plan(
     workers: int = 1,
 ) -> Plan:
     root = root.expanduser().resolve()
-    now = now or datetime.now()
+    now = now or datetime.now().astimezone()
     taken: set[Path] = set()
     moves: list[Move] = []
     extra_roots: set[Path] = set()

@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-29
+
+### Fixed
+
+- MCP clients such as Claude Code rejected `plan_tidy`, `scan_folder` and `find_duplicates` results because timestamps had no timezone. All timestamps are now timezone-aware.
+
 ## [0.1.0] - 2026-10-19
 
 First release. Install from GitHub with `uv tool install git+https://github.com/Tarunvaka/tidy-mcp`.
@@ -26,5 +32,6 @@ First release. Install from GitHub with `uv tool install git+https://github.com/
 - Only the top level of the chosen folder is touched. Hidden files and symlinks are skipped.
 - Property-based tests check that no file escapes the allowed folders, nothing is lost, and undo restores everything.
 
-[Unreleased]: https://github.com/Tarunvaka/tidy-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Tarunvaka/tidy-mcp/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Tarunvaka/tidy-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Tarunvaka/tidy-mcp/releases/tag/v0.1.0
