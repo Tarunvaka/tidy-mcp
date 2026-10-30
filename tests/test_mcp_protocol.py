@@ -44,3 +44,10 @@ def test_every_tool_result_matches_its_schema_including_formats(messy):
     checker = jsonschema.Draft202012Validator.FORMAT_CHECKER
     for name, data in results.items():
         jsonschema.validate(data, schemas[name], format_checker=checker)
+
+
+def test_schemas_use_only_standard_formats(messy):
+    import json
+
+    schemas, _ = run(messy)
+    assert '"format": "path"' not in json.dumps(schemas)

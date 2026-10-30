@@ -2,8 +2,12 @@
 
 from enum import StrEnum
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import AwareDatetime, BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field, WithJsonSchema
+
+# Plain string in JSON Schema; pydantic's default "format": "path" makes MCP clients warn.
+FilePath = Annotated[Path, WithJsonSchema({"type": "string"})]
 
 
 class FileKind(StrEnum):
@@ -20,7 +24,7 @@ class FileKind(StrEnum):
 class FileInfo(BaseModel):
     """One file found by the scanner."""
 
-    path: Path
+    path: FilePath
     kind: FileKind
     size: int
     modified: AwareDatetime
@@ -44,8 +48,8 @@ class MoveAction(StrEnum):
 class Move(BaseModel):
     """One planned or executed change. The undo log is a list of these."""
 
-    source: Path
-    destination: Path
+    source: FilePath
+    destination: FilePath
     action: MoveAction
     reason: str = ""
 
@@ -54,10 +58,10 @@ class Plan(BaseModel):
     """A dry-run plan for one folder. Nothing changes until it is applied."""
 
     id: str
-    root: Path
+    root: FilePath
     created: AwareDatetime
     moves: list[Move] = Field(default_factory=list)
-    extra_roots: list[Path] = Field(
+    extra_roots: list[FilePath] = Field(
         default_factory=list,
         description="Folders outside root that config rules may move files into",
     )

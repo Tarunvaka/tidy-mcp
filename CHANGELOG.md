@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+
+- File paths in tool schemas are plain strings, so MCP clients no longer warn about an unknown "path" format.
+
 ## [0.1.1] - 2026-10-29
 
 ### Fixed
